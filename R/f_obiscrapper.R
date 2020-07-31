@@ -12,6 +12,8 @@
 
 .obiescrapper.globals$analytics_url <- NA # Link to obi
 
+.obiescrapper.globals$tempdir <- paste0(tempdir(),'/obiscrapper/')
+
 # Initialize the path to firefox and profile
 .init_firefoxpath <- function(path_to_firefox)
 {
@@ -44,9 +46,9 @@
   }
 
   .obiescrapper.globals$firefox_config_prefs <- list(
-    browser.download.downloadDir="/tmp/",
-    browser.download.dir="/tmp/",
-    browser.download.defaultFolder="/tmp/",
+    browser.download.downloadDir=.obiescrapper.globals$tempdir,
+    browser.download.dir=.obiescrapper.globals$tempdir ,
+    browser.download.defaultFolder=.obiescrapper.globals$tempdir,
     browser.download.folderList=2L, # Custom directory
     browser.download.manager.showWhenStarting = FALSE,
     browser.helperApps.neverAsk.openFile = "text/csv",
@@ -55,6 +57,7 @@
     browser.download.manager.showAlertOnComplete = FALSE,
     browser.download.manager.closeWhenDone = TRUE,
     browser.download.manager.useWindow = FALSE,
+    browser.download.manager.focusWhenStarting = FALSE,
     pdfjs.disabled = TRUE
     )
 
@@ -153,6 +156,14 @@
   }, warning,error=function(e){return(FALSE)})
 }
 
+.reconnect <- function()
+{
+  if (!.is_connected())
+  { # Reconnect in case user was disconnected
+    .connect_obi()
+    .obiescrapper.globals$rd$navigate(go_url)
+  }
+}
 # Open firefox and go to the obi URL
 .connect_obi <- function()
 {
@@ -173,8 +184,8 @@
           #.silence({rs <- rsDriver(browser = "firefox", port = as.integer(try_port), extraCapabilities = c(ff64,
           #                                                                                                pr64,
           #                                                                                                .obiescrapper.globals$fprof ))})
-          .obiescrapper.globals$rs <- RSelenium::rsDriver(port = as.integer(try_port), browser = "firefox",
-                         verbose = TRUE, check = TRUE, extraCapabilities = .obiescrapper.globals$fprof)
+          .silence(.obiescrapper.globals$rs <- RSelenium::rsDriver(port = as.integer(try_port), browser = "firefox",
+                         verbose = TRUE, check = TRUE, extraCapabilities = .obiescrapper.globals$fprof))
           break
         },
         warning,error=function(e){

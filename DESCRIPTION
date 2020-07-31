@@ -14,3 +14,4 @@ Imports:
     RSelenium,
     dplyr,
     getPass
+RoxygenNote: 7.1.0
