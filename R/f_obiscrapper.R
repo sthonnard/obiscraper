@@ -53,9 +53,12 @@
     browser.helperApps.neverAsk.saveToDisk = "text/csv",
     browser.helperApps.alwaysAsk.force = FALSE,
     browser.download.manager.showAlertOnComplete = FALSE,
-    browser.download.manager.closeWhenDone = FALSE )
+    browser.download.manager.closeWhenDone = TRUE,
+    browser.download.manager.useWindow = FALSE,
+    pdfjs.disabled = TRUE
+    )
 
-  .obiescrapper.globals$fprof <- makeFirefoxProfile(.obiescrapper.globals$firefox_config_prefs)
+  .obiescrapper.globals$fprof <- RSelenium::makeFirefoxProfile(.obiescrapper.globals$firefox_config_prefs)
 
 }
 
@@ -64,7 +67,7 @@
 {
   if (is.na(username))
   {
-    .obiescrapper.globals$username <- readline(prompt="Username? ")
+    .obiescrapper.globals$username <- base::readline(prompt="Username? ")
   }
   else
   {
@@ -73,7 +76,7 @@
 
   if (is.na(password))
   {
-    .obiescrapper.globals$password <- getPass("Password? ")
+    .obiescrapper.globals$password <- getPass::getPass("Password? ")
   }
   else
   {
@@ -127,11 +130,11 @@
 }
 
 .is_connected <- function()
-{ # If element logout exists on the page, it means the user is connected to obiee
+{ # If element logout exists on the page, it means the user is connected to obi
   return(.is_element_exists(elem="logout", using="id"))
 }
 .is_signinin <- function()
-{ # If element signingin exists on the page, it means obiee is connecting
+{ # If element signingin exists on the page, it means obi is connecting
   return(.is_element_exists(elem="signingin", using="id"))
 }
 
@@ -151,7 +154,7 @@
 }
 
 # Open firefox and go to the obi URL
-.connect_obiee <- function()
+.connect_obi <- function()
 {
 
   if (!.is_browser_openned())
@@ -170,7 +173,7 @@
           #.silence({rs <- rsDriver(browser = "firefox", port = as.integer(try_port), extraCapabilities = c(ff64,
           #                                                                                                pr64,
           #                                                                                                .obiescrapper.globals$fprof ))})
-          .obiescrapper.globals$rs <- rsDriver(port = as.integer(try_port), browser = "firefox",
+          .obiescrapper.globals$rs <- RSelenium::rsDriver(port = as.integer(try_port), browser = "firefox",
                          verbose = TRUE, check = TRUE, extraCapabilities = .obiescrapper.globals$fprof)
           break
         },
@@ -195,7 +198,7 @@
 }
 
 # Login to obi
-.login_obiee <- function()
+.login_obi <- function()
 {
   # Fill the login form of the extranet and login once available
   attempts=1
@@ -238,7 +241,7 @@
       }, warning,error=function(e){})
 
     if (.is_signinin())
-    { # Siginin in, wait until user is actually connected to obiee
+    { # Siginin in, wait until user is actually connected to obi
       while(!.is_connected()){Sys.sleep(1)}
     }
   }
@@ -247,71 +250,4 @@
 
 
 
-# Submit a query to obi and download the result
-query_obiee <- function(query = 'SELECT
-                                  ...
-                                  FROM "..."
-                                  ORDER BY 3 ASC NULLS LAST, 4 ASC NULLS LAST, 2 ASC NULLS LAST
-                                  FETCH FIRST 10000000 ROWS ONLY')
-{
-  go_url <- paste0(.obiescrapper.globals$analytics_url,'saw.dll?Go&SQL=',URLencode(query),'&Format=CSV')
 
-
-  curr_time <- Sys.time()
-
-  if (!.is_connected())
-  { # Reconnect and submit the query again, in case user was disconnected
-    .connect_obiee()
-    .obiescrapper.globals$rd$navigate(go_url)
-  }
-
-  .obiescrapper.globals$rd$navigate(go_url)
-
-
-  # Wait for the file to be downloaded
-  # Fetch last CSV file written
-  attempts=0
-  while(attempts<=100)
-  {
-    # Ensure the query submitted by the user is well formed
-    ErrorMessage <- NULL
-    tryCatch({
-      .silence({ErrorMessage <- .obiescrapper.globals$rd$findElement(using = 'class', value = 'ErrorMessage')})
-    }, warning,error=function(e){})
-
-    if (!is.null(ErrorMessage))
-    {
-      stop(ErrorMessage$getElementText()[[1]])
-    }
-
-    files <- data.frame(filepath=list.files(path=paste0(path.expand('~'),"/Downloads"),pattern="*.CSV",full.names = TRUE,recursive = TRUE, include.dirs = TRUE))
-    #dirs <- dirname(files)
-
-    files %>% rowwise() %>% mutate(edit_date=file.mtime(as.character( filepath))) %>%
-      filter(edit_date > curr_time & grepl("Ana",filepath)>0) -> last_csv
-
-    # File download is not over:
-    last_csv %>% filter(grepl(".part",filepath) > 0) -> part
-
-    if (nrow(last_csv) == 0 | nrow(part) > 0)
-    {
-      Sys.sleep(2)
-      attempts <- attempts + 1
-    }
-    else
-    {
-      csv <- read.csv(as.character(last_csv$filepath))
-      file.remove(as.character(last_csv$filepath))
-      return(csv)
-    }
-  }
-
-  stop("Unable to retrieve the result")
-
-}
-
-.disconnectobi <- function()
-{
-  .obiescrapper.globals$rd$closeall()
-  .obiescrapper.globals$rd$closeServer()
-}
