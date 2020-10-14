@@ -1,5 +1,7 @@
 .obiescrapper.globals <- new.env()
 
+.obiescrapper.globals$debuglevel <- 0
+
 .obiescrapper.globals$username <- NA
 .obiescrapper.globals$password <- NA
 .obiescrapper.globals$firefoxpath <- "/Applications/Firefox.app"
@@ -13,6 +15,9 @@
 .obiescrapper.globals$analytics_url <- NA # Link to obi
 
 .obiescrapper.globals$tempdir <- paste0(tempdir(),'/obiscrapper/')
+
+
+.obiescrapper.globals$extranet_elem_id <- list()
 
 # Initialize the path to firefox and profile
 .init_firefoxpath <- function(path_to_firefox)
@@ -88,6 +93,10 @@
 
 }
 
+.init_extranet <- function(extranet_elem_id)
+{
+  .obiescrapper.globals$extranet_elem_id <- extranet_elem_id
+}
 .init_obilink <- function(obilink)
 {
   if (is.na(obilink))
@@ -101,11 +110,14 @@
 }
 
 # Initialize everything
-.init <- function(path_to_firefox = NA, username = NA, password = NA, obilink = NA)
+.init <- function(path_to_firefox = NA, username = NA, password = NA, obilink = NA, debuglevel = NA)
 {
+  .log("Start initialization", 1)
+  .obiescrapper.globals$debuglevel <- debuglevel
   .init_firefoxpath(path_to_firefox)
   .init_credential(username, password)
   .init_obilink(obilink)
+  .log("End initialization", 1)
 }
 
 # Silence the message returned by RSelenium
@@ -211,13 +223,15 @@
 # Login to obi
 .login_obi <- function()
 {
+  .log("Login to obi", 1)
   # Fill the login form of the extranet and login once available
   attempts=1
   while (!.is_connected())
   {
+    .log(paste("Login to obi attemp",attempts), 1)
     tryCatch(
       {
-        silence(
+        .silence(
           {
             username_elem <- .obiescrapper.globals$rd$findElement(using = 'id', value = 'rad_usr')
             username_elem$sendKeysToElement(list(.obiescrapper.globals$username))
@@ -225,15 +239,17 @@
             pass_elem <- .obiescrapper.globals$rd$findElement(using = 'id', value = 'rad_pw')
             pass_elem$sendKeysToElement(list(.obiescrapper.globals$password))
             Sys.sleep(1)
+            .log("Login to obi, form completed", 1)
           }
         )
       },warning,error=function(e){ # Error occurs when element not found
         tryCatch(
           {
-            silence({logout <- .obiescrapper.globals$rd$findElement(using = 'id', value = 'logout')})
+            .log(paste("Login to obi, error ",e$message), 1)
+            .silence({logout <- .obiescrapper.globals$rd$findElement(using = 'id', value = 'logout')})
             # User already connected, break
             break
-          }, warning,error=function(err){})
+          }, warning,error=function(err){.log(paste("Login to obi, error elem logout ",err$message), 1)})
         error <- e
         Sys.sleep(3*attempts)
         attempts <- attempts + 1}
@@ -245,8 +261,10 @@
     tryCatch(
       {
         .silence({
-          login_button <- .obiescrapper.globals$rd$findElement(using = 'class', value = "btn")
-          login_button$clickElement()
+          #login_button <- .obiescrapper.globals$rd$findElement(using = 'class', value = "btn")
+          #login_button$clickElement()
+          # Logging by pressing enter
+          pass_elem$sendKeysToElement(list(key="enter"))
           Sys.sleep(2)
         })
       }, warning,error=function(e){})
@@ -256,9 +274,27 @@
       while(!.is_connected()){Sys.sleep(1)}
     }
   }
-
+  .log("login finished", 1)
 }
 
+.log <- function(message, loglevel = 0)
+{
+  if (loglevel <= .obiescrapper.globals$debuglevel )
+  {
+    print(message)
+  }
+}
 
-
-
+# Workaround for downloading CSV with RSelenium/Firefox.
+# Issue was: Firefox is blocked after one download - https://github.com/SeleniumHQ/selenium-ide/issues/898
+# Workaround from https://stackoverflow.com/questions/3749231/download-file-using-javascript-jquery using js injection
+.download_file <- function(url)
+{
+    .obiescrapper.globals$rd$executeScript(paste0('
+  var link=document.createElement("a");
+  document.body.appendChild(link);
+  link.href="',url,'" ;
+  link.click();
+  console.log("download "',url,'" started);
+                   '))
+}

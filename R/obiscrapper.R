@@ -1,4 +1,3 @@
-
 #' obiscrapper: A Tool For Submitting Queries to Oracle Business Intelligence by webscrapping the analytics server
 #'
 #' Execute OBI queries by web scrapping the analytics server with RSelenium. The analytics login form is handled,
@@ -18,7 +17,7 @@
 #' \strong{connectobi(path_to_firefox, username, password, obilink)}\cr
 #' Open Firefox, browse the OBI web portal and provide your username in passward to the formular so you are logged in.
 #'
-#' \strong{query_obi(query)}\cr
+#' \strong{submit_query(query)}\cr
 #' Submit a query to the OBI web portal by using the GO URL and return the result as a Data Frame.\cr
 #'
 #' \strong{disconnectobi()}\cr
@@ -41,6 +40,7 @@ source("./R/f_obiscrapper.R")
 #' @param username  Username to access the OBI server. If not provided, it will be prompted.
 #' @param password User password to access the OBI server. If not provided, it will be prompted.
 #' @param obilink  Mandatory link to the analytics web portal. Eg https://mycompany.int/analytics/".
+#' @param extranet_elem_id  Optional. Id of the HTML element for user and password, in case you use an extranet before analytics server. Example: list("user"="rad_usr", "password"="rad_pw")
 #'
 #' @export
 #'
@@ -51,12 +51,23 @@ source("./R/f_obiscrapper.R")
 #' # Connect and provide the password to the function. Nothing will be prompted.
 #' # Useful for batch mode.
 #' connectobi(username="myusername", password="myfancypassword", obilink="https://mycompany.int/analytics/")
-connectobi <- function(path_to_firefox = NA, username = NA, password = NA, obilink = NA)
+connectobi <- function(path_to_firefox = NA, username = NA, password = NA, obilink = NA,
+                       extranet_elem_id = NA, debuglevel = 0)
 {
-  .init(path_to_firefox,username, password, obilink)
+  .init(path_to_firefox,username, password, obilink, debuglevel)
+  .init_extranet(extranet_elem_id)
   .connect_obi()
+  .login_obi()
 }
 
+#' disconnectobi
+#'
+#' Close the session and RSelenium server
+#'
+#' @export
+#'
+#' @examples
+#' disconnectobi()
 disconnectobi <- function()
 {
   .obiescrapper.globals$rd$closeall()
@@ -64,12 +75,20 @@ disconnectobi <- function()
 }
 
 
-# Submit a query to obi and download the result
-query_obi <- function(query = 'SELECT
-                                  ...
-                                  FROM "..."
-                                  ORDER BY 3 ASC NULLS LAST, 4 ASC NULLS LAST, 2 ASC NULLS LAST
-                                  FETCH FIRST 10000000 ROWS ONLY')
+#' submit_query
+#'
+#' Submit a query to OBI and get the result as a dataframe
+#'
+#' @param query The query that will be sent to OBI
+
+#' @export
+#'
+#' @examples
+#' submit_query('SELECT "MyModel"."Flights"."Departure Airport" s_1
+#' FROM "MyModel"
+#' ORDER BY 1 ASC NULLS LAST
+#' FETCH FIRST 10000000 ROWS ONL')
+submit_query <- function(query = 'SELECT ... FROM "..." ORDER BY 1 ASC NULLS LAST FETCH FIRST 10000000 ROWS ONLY')
 {
   go_url <- paste0(.obiescrapper.globals$analytics_url,'saw.dll?Go&SQL=',URLencode(query),'&Format=CSV')
 
@@ -77,11 +96,12 @@ query_obi <- function(query = 'SELECT
 
 
   .reconnect() # Ensure user is connected before sumbitting the query
-  .obiescrapper.globals$rd$navigate(go_url)
+  #.obiescrapper.globals$rd$navigate(go_url)
+  .download_file(go_url)
   if (!.is_connected()) # Reconnect in case user is sent back to the login page after navigation to go URL
   {
     .reconnect()
-    .obiescrapper.globals$rd$navigate(go_url)
+    .download_file(go_url)
   }
 
   # Wait for the file to be downloaded
@@ -126,6 +146,14 @@ query_obi <- function(query = 'SELECT
 
 }
 
+#' get_obi_client
+#'
+#' Return the RSelenium client, for debugging
+#'
+#' @export
+#'
+#' @examples
+#' get_obi_client()
 get_obi_client <- function()
 {
   return(.obiescrapper.globals$rd)

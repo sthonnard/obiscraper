@@ -23,7 +23,7 @@ Bugs report:\cr
 \strong{connectobi(path_to_firefox, username, password, obilink)}\cr
 Open Firefox, browse the OBI web portal and provide your username in passward to the formular so you are logged in.
 
-\strong{query_obi(query)}\cr
+\strong{submit_query(query)}\cr
 Submit a query to the OBI web portal by using the GO URL and return the result as a Data Frame.\cr
 
 \strong{disconnectobi()}\cr
