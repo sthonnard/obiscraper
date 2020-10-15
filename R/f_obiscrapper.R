@@ -175,7 +175,6 @@
   if (!.is_connected())
   { # Reconnect in case user was disconnected
     .connect_obi()
-    .obiescrapper.globals$rd$navigate(go_url)
   }
 }
 # Open firefox and go to the obi URL
