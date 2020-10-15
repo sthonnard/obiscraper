@@ -80,7 +80,7 @@ disconnectobi <- function()
 #' Submit a query to OBI and get the result as a dataframe
 #'
 #' @param query The query that will be sent to OBI
-
+#' @importFrom magrittr %>%
 #' @export
 #'
 #' @examples
@@ -94,8 +94,10 @@ submit_query <- function(query = 'SELECT ... FROM "..." ORDER BY 1 ASC NULLS LAS
 
   curr_time <- Sys.time()
 
+  .log(paste("GO URL:",go_url))
 
   .reconnect() # Ensure user is connected before sumbitting the query
+
   #.obiescrapper.globals$rd$navigate(go_url)
   .download_file(go_url)
   if (!.is_connected()) # Reconnect in case user is sent back to the login page after navigation to go URL
@@ -106,28 +108,28 @@ submit_query <- function(query = 'SELECT ... FROM "..." ORDER BY 1 ASC NULLS LAS
 
   # Wait for the file to be downloaded
   # Fetch last CSV file written
-  attempts=0
-  while(attempts<=100)
+  attempts <- 0
+  while (attempts <= 100)
   {
     # Ensure the query submitted by the user is well formed
     ErrorMessage <- NULL
     tryCatch({
       .silence({ErrorMessage <- .obiescrapper.globals$rd$findElement(using = 'class', value = 'ErrorMessage')})
-    }, warning,error=function(e){})
+    }, warning,error = function(e){})
 
     if (!is.null(ErrorMessage))
     {
       stop(ErrorMessage$getElementText()[[1]])
     }
 
-    files <- data.frame(filepath=list.files(path=paste0(path.expand('~'),.obiescrapper.globals$tempdir),pattern="*.CSV",full.names = TRUE,recursive = TRUE, include.dirs = TRUE))
+    files <- data.frame(filepath = list.files(path = .obiescrapper.globals$tempdir, pattern = "*.CSV", full.names = TRUE,recursive = TRUE, include.dirs = TRUE))
     #dirs <- dirname(files)
 
-    files %>% dplyr::rowwise() %>% dplyr::mutate(edit_date=file.mtime(as.character( filepath))) %>%
-      dplyr::filter(edit_date > curr_time & grepl("Ana",filepath)>0) -> last_csv
+    files %>% dplyr::rowwise() %>% dplyr::mutate(edit_date = file.mtime(as.character(filepath))) %>%
+    dplyr::filter(edit_date > curr_time & grepl("Ana",filepath) > 0) -> last_csv
 
     # File download is not over:
-    last_csv %>% dplyr::filter(grepl(".part",filepath) > 0) -> part
+    last_csv %>% dplyr::filter(grepl(".part", filepath) > 0) -> part
 
     if (nrow(last_csv) == 0 | nrow(part) > 0)
     {
@@ -135,7 +137,7 @@ submit_query <- function(query = 'SELECT ... FROM "..." ORDER BY 1 ASC NULLS LAS
       attempts <- attempts + 1
     }
     else
-    { # CSV file completed
+    {# CSV file completed
       csv <- utils::read.csv(as.character(last_csv$filepath))
       file.remove(as.character(last_csv$filepath))
       return(csv)

@@ -4,7 +4,14 @@
 \alias{connectobi}
 \title{connectobi}
 \usage{
-connectobi(path_to_firefox = NA, username = NA, password = NA, obilink = NA)
+connectobi(
+  path_to_firefox = NA,
+  username = NA,
+  password = NA,
+  obilink = NA,
+  extranet_elem_id = NA,
+  debuglevel = 0
+)
 }
 \arguments{
 \item{path_to_firefox}{Optional path to Firefox in case it is not available in your path. Default NA.}
@@ -14,6 +21,8 @@ connectobi(path_to_firefox = NA, username = NA, password = NA, obilink = NA)
 \item{password}{User password to access the OBI server. If not provided, it will be prompted.}
 
 \item{obilink}{Mandatory link to the analytics web portal. Eg https://mycompany.int/analytics/".}
+
+\item{extranet_elem_id}{Optional. Id of the HTML element for user and password, in case you use an extranet before analytics server. Example: list("user"="rad_usr", "password"="rad_pw")}
 }
 \description{
 Open Firefox, browse the OBI web portal and provide your username and password to the formular so you are logged in.
