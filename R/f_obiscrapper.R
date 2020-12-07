@@ -24,21 +24,51 @@
 # Initialize the path to firefox and profile
 .init_firefoxpath <- function(path_to_firefox)
 {
+  # Needed on linux
+  if (!dir.exists(.obiescrapper.globals$tempdir)){
+    .log(paste("Temp directory",.obiescrapper.globals$tempdir,"will be created!"),1)
+    dir.create(.obiescrapper.globals$tempdir, recursive = TRUE)
+    if (!dir.exists(.obiescrapper.globals$tempdir))
+    {
+      disconnectobi()
+      stop("Cannot create temp directory!")
+    }
+  }
+
   if (is.na(path_to_firefox))
   {
+    .obiescrapper.globals$firefox_config_prefs <- list(
+      browser.download.downloadDir = .obiescrapper.globals$tempdir,
+      browser.download.dir = .obiescrapper.globals$tempdir,
+      browser.download.defaultFolder = .obiescrapper.globals$tempdir,
+      browser.download.folderList = 2L, # Custom directory
+      browser.download.manager.showWhenStarting = FALSE,
+      browser.helperApps.neverAsk.openFile = "text/csv",
+      browser.helperApps.neverAsk.saveToDisk = "text/csv",
+      browser.helperApps.alwaysAsk.force = FALSE,
+      browser.download.manager.showAlertOnComplete = FALSE,
+      browser.download.manager.closeWhenDone = TRUE,
+      browser.download.manager.useWindow = FALSE,
+      browser.download.manager.focusWhenStarting = FALSE,
+      pdfjs.disabled = TRUE
+    )
+
     if (.Platform$OS.type == "windows")
     { # Windows
+      .log("Detected Windows. Assuming Firefox is in %APPDATA%\\Mozilla\\Firefox\\Firefox.exe",1)
       .obiescrapper.globals$firefoxpath <- "%APPDATA%\\Mozilla\\Firefox\\Firefox.exe"
     }
     else
     {
       if (as.character(Sys.info()[1]) == "Darwin")
       {# macOs
+        .log("Detected macos. Assuming Firefox is in /Applications/Firefox.app",1)
         .obiescrapper.globals$firefoxpath <- "/Applications/Firefox.app"
       }
       else
       {# Linux
-        .obiescrapper.globals$firefoxpath <- "firefox"
+        .log("Detected Linux. Assuming Firefox is in /usr/bin/firefox",1)
+        .obiescrapper.globals$firefoxpath <- "/usr/bin/firefox"
       }
     }
   }
@@ -52,21 +82,6 @@
     stop(paste(.obiescrapper.globals$firefoxpath,"does not exist!"))
   }
 
-  .obiescrapper.globals$firefox_config_prefs <- list(
-    browser.download.downloadDir = .obiescrapper.globals$tempdir,
-    browser.download.dir = .obiescrapper.globals$tempdir,
-    browser.download.defaultFolder = .obiescrapper.globals$tempdir,
-    browser.download.folderList = 2L, # Custom directory
-    browser.download.manager.showWhenStarting = FALSE,
-    browser.helperApps.neverAsk.openFile = "text/csv",
-    browser.helperApps.neverAsk.saveToDisk = "text/csv",
-    browser.helperApps.alwaysAsk.force = FALSE,
-    browser.download.manager.showAlertOnComplete = FALSE,
-    browser.download.manager.closeWhenDone = TRUE,
-    browser.download.manager.useWindow = FALSE,
-    browser.download.manager.focusWhenStarting = FALSE,
-    pdfjs.disabled = TRUE
-    )
 
   .obiescrapper.globals$fprof <- RSelenium::makeFirefoxProfile(.obiescrapper.globals$firefox_config_prefs)
 
@@ -97,7 +112,11 @@
 
 .init_extranet <- function(extranet_elem_id)
 {
-  .obiescrapper.globals$extranet_elem_id <- extranet_elem_id
+  if (is.list(extranet_elem_id))
+  {
+    .obiescrapper.globals$extranet_elem_id <- extranet_elem_id
+  }
+
 }
 .init_obilink <- function(obilink)
 {
@@ -125,7 +144,15 @@
 # Silence the message returned by RSelenium
 .silence <- function(x)
 {
-  suppressWarnings(suppressMessages(suppressPackageStartupMessages(x)))
+  if (.obiescrapper.globals$debuglevel >= 2)
+  {
+    x
+  }
+  else
+  {
+    suppressWarnings(suppressMessages(suppressPackageStartupMessages(x)))
+  }
+
 }
 
 
@@ -202,7 +229,16 @@
                          verbose = TRUE, check = TRUE, extraCapabilities = .obiescrapper.globals$fprof))
           break
         },
-        warning,error = function(e){
+        warning=function(w){
+          if (.obiescrapper.globals$debuglevel >= 2)
+          {
+            warning(w)
+          }
+        },error = function(e){
+          if (.obiescrapper.globals$debuglevel >= 2)
+          {
+            message(e)
+          }
           error <- e
         })
       try_port <- try_port - 1
@@ -238,11 +274,17 @@
                         warning,error = function(e){ # Error occurs when element not found
                           .log("Detected extranet form", 1)
                           if (length(.obiescrapper.globals$extranet_elem_id) == 0) {
-                            stop("OBI login form not found. Please provide extranet_elem_id to connectobi.")
+                            disconnectobi()
+                            stop("OBI login form not found. Seems you are connecting from an extranet portal. Please provide extranet_elem_id to connectobi.")
                           }
                           else
                           {
                             .log("form info", 1)
+                            if (!is.list(.obiescrapper.globals$extranet_elem_id))
+                            {
+                              disconnectobi()
+                              stop("OBI login form not found. Seems you are connecting from an extranet portal. Please provide extranet_elem_id to connectobi.")
+                            }
                             .log(.obiescrapper.globals$extranet_elem_id, 1)
                             .obiescrapper.globals$active_form <- .obiescrapper.globals$extranet_elem_id
                           }
@@ -252,6 +294,7 @@
     # Stop if incorrect username or password
     if (stringr::str_detect(.obiescrapper.globals$rd$getPageSource(), .obiescrapper.globals$active_form$invalid_user))
     {
+      disconnectobi()
       stop("Incorrect username or password!")
     }
 
