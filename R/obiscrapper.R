@@ -70,8 +70,14 @@ connectobi <- function(path_to_firefox = NA, username = NA, password = NA, obili
 #' disconnectobi()
 disconnectobi <- function()
 {
-  .obiescrapper.globals$rd$closeall()
-  .obiescrapper.globals$rd$closeServer()
+  tryCatch(
+    {
+      .obiescrapper.globals$rd$closeall()
+      .obiescrapper.globals$rd$closeServer()
+    },warning,error=function(e){message(e)
+      }
+  )
+
 }
 
 
