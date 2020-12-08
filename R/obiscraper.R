@@ -174,7 +174,7 @@ get_obi_client <- function()
 #' submit_physical_sql
 #'
 #' Sumbit SQL statement to the OBI physical layer and return the result as a Data Frame. Experimental!
-#' @param psql SQL statement that will be sumbitted to connection pool pconnectionpool of the OBI physical layer.
+#' @param psql SQL statement that will be submitted to connection pool pconnectionpool of the OBI physical layer.
 #' @param pconnectionpool  Name of the connetion pool.
 #' @param clean_final_result  Clean final result (TRUE/FALSE). Will removed ",00" from integers.
 #'
