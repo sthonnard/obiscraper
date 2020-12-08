@@ -1,6 +1,6 @@
-#' obiscrapper: A Tool For Submitting Queries to Oracle Business Intelligence by webscrapping the analytics server
+#' obiscraper: A Tool For Submitting Queries to Oracle Business Intelligence by webscraping the analytics server
 #'
-#' Execute OBI queries by web scrapping the analytics server with RSelenium. The analytics login form is handled,
+#' Execute OBI queries by web scraping the analytics server with RSelenium. The analytics login form is handled,
 #' even when behind an extranet. Then queries are submitted by using
 #' the OBI GO URL (saw.dll?Go&SQL=select+Region,Euro+from+SupplierSalesEurope).
 #' Queries result returned as R Data Frame.
@@ -10,15 +10,18 @@
 #' -Firefox
 #'
 #' Bugs report:\cr
-#'  \url{https://github.com/sthonnard/obiscrapper}
+#'  \url{https://github.com/sthonnard/obiscraper}
 #'
 #'
-#' @section obiscrapper functions:
+#' @section obiscraper functions:
 #' \strong{connectobi(path_to_firefox, username, password, obilink)}\cr
-#' Open Firefox, browse the OBI web portal and provide your username in passward to the formular so you are logged in.
+#' Open Firefox, browse the OBI web portal and provide your username in password to the formular so you are logged in.
 #'
 #' \strong{submit_query(query)}\cr
-#' Submit a query to the OBI web portal by using the GO URL and return the result as a Data Frame.\cr
+#' Submit a logical query to the OBI web portal by using the GO URL and return the result as a Data Frame.\cr
+#'
+#' \strong{submit_physical_sql(sql_query, connection_pool )}\cr
+#' Submit a physical query to the provided connection pool and return the result as a Data Frame.\cr
 #'
 #' \strong{disconnectobi()}\cr
 #' Disconnect from OBI and close the web browser.\cr
@@ -28,10 +31,10 @@
 #'
 #'
 #' @docType package
-#' @name obiscrapper
+#' @name obiscraper
 #'
 
-source("./R/f_obiscrapper.R")
+source("./R/f_obiscraper.R")
 #' connectobi
 #'
 #' Open Firefox, browse the OBI web portal and provide your username and password to the formular so you are logged in.
@@ -54,10 +57,10 @@ source("./R/f_obiscrapper.R")
 connectobi <- function(path_to_firefox = NA, username = NA, password = NA, obilink = NA,
                        extranet_elem_id = NA, debuglevel = 0)
 {
-  .init(path_to_firefox,username, password, obilink, debuglevel)
-  .init_extranet(extranet_elem_id)
-  .connect_obi()
-  .login_obi()
+  init(path_to_firefox,username, password, obilink, debuglevel)
+  init_extranet(extranet_elem_id)
+  connect_obi()
+  login_obi()
 }
 
 #' disconnectobi
@@ -72,8 +75,8 @@ disconnectobi <- function()
 {
   tryCatch(
     {
-      .obiescrapper.globals$rd$closeall()
-      .obiescrapper.globals$rd$closeServer()
+      obiescraper.globals$rd$closeall()
+      obiescraper.globals$rd$closeServer()
     },warning,error=function(e){message(e)
       }
   )
@@ -83,9 +86,9 @@ disconnectobi <- function()
 
 #' submit_query
 #'
-#' Submit a query to OBI and get the result as a dataframe
+#' Submit a query to OBI Presentaion Layer and get the result as a Data Frame
 #'
-#' @param query The query that will be sent to OBI
+#' @param query The query that will be sent to OBI Presentation Layer
 #' @importFrom magrittr %>%
 #' @export
 #'
@@ -96,20 +99,20 @@ disconnectobi <- function()
 #' FETCH FIRST 10000000 ROWS ONL')
 submit_query <- function(query = 'SELECT ... FROM "..." ORDER BY 1 ASC NULLS LAST FETCH FIRST 10000000 ROWS ONLY')
 {
-  go_url <- paste0(.obiescrapper.globals$analytics_url,'saw.dll?Go&SQL=',URLencode(query),'&Format=CSV')
+  go_url <- paste0(obiescraper.globals$analytics_url,'saw.dll?Go&SQL=',URLencode(query),'&Format=CSV')
 
   curr_time <- Sys.time()
 
-  .log(paste("GO URL:",go_url))
+  log(paste("GO URL:",go_url))
 
-  .reconnect() # Ensure user is connected before sumbitting the query
+  reconnect() # Ensure user is connected before sumbitting the query
 
-  #.obiescrapper.globals$rd$navigate(go_url)
-  .download_file(go_url)
-  if (!.is_connected()) # Reconnect in case user is sent back to the login page after navigation to go URL
+  #.obiescraper.globals$rd$navigate(go_url)
+  download_file(go_url)
+  if (!is_connected()) # Reconnect in case user is sent back to the login page after navigation to go URL
   {
-    .reconnect()
-    .download_file(go_url)
+    reconnect()
+    download_file(go_url)
   }
 
   # Wait for the file to be downloaded
@@ -120,7 +123,7 @@ submit_query <- function(query = 'SELECT ... FROM "..." ORDER BY 1 ASC NULLS LAS
     # Ensure the query submitted by the user is well formed
     ErrorMessage <- NULL
     tryCatch({
-      .silence({ErrorMessage <- .obiescrapper.globals$rd$findElement(using = 'class', value = 'ErrorMessage')})
+      silence({ErrorMessage <- obiescraper.globals$rd$findElement(using = 'class', value = 'ErrorMessage')})
     }, warning,error = function(e){})
 
     if (!is.null(ErrorMessage))
@@ -128,7 +131,7 @@ submit_query <- function(query = 'SELECT ... FROM "..." ORDER BY 1 ASC NULLS LAS
       stop(ErrorMessage$getElementText()[[1]])
     }
 
-    files <- data.frame(filepath = list.files(path = .obiescrapper.globals$tempdir, pattern = "*.CSV", full.names = TRUE,recursive = TRUE, include.dirs = TRUE))
+    files <- data.frame(filepath = list.files(path = obiescraper.globals$tempdir, pattern = "*.CSV", full.names = TRUE,recursive = TRUE, include.dirs = TRUE))
     #dirs <- dirname(files)
 
     files %>% dplyr::rowwise() %>% dplyr::mutate(edit_date = file.mtime(as.character(filepath))) %>%
@@ -164,5 +167,35 @@ submit_query <- function(query = 'SELECT ... FROM "..." ORDER BY 1 ASC NULLS LAS
 #' get_obi_client()
 get_obi_client <- function()
 {
-  return(.obiescrapper.globals$rd)
+  return(obiescraper.globals$rd)
 }
+
+
+#' submit_physical_sql
+#'
+#' Sumbit SQL statement to the OBI physical layer and return the result as a Data Frame. Experimental!
+#' @param psql SQL statement that will be sumbitted to connection pool pconnectionpool of the OBI physical layer.
+#' @param pconnectionpool  Name of the connetion pool.
+#' @param clean_final_result  Clean final result (TRUE/FALSE). Will removed ",00" from integers.
+#'
+#' @export
+#'
+#' @examples
+#' run_physical_sql(psql="select distinct icao_code from dwh.airport", pconnectionpool="my_dwh")
+submit_physical_sql <- function(psql="select distinct icao_code from dwh.airport", pconnectionpool="my_dwh", clean_final_result=TRUE)
+{
+  corr_sql <- stringr::str_remove_all(psql,"\n")
+  expected_records <- run_physical_query(paste0("select count(*) as NB_REC from (", corr_sql, ")"), expected_nrow = 1, pconnectionpool)
+  expected_records <- as.double(stringr::str_replace(expected_records$NB_REC,",","."))
+  print(paste("Expecting",expected_records,"observations"))
+  res <- run_physical_query(corr_sql, expected_nrow = expected_records, pconnectionpool)
+
+  if (clean_final_result)
+  {
+    res %>% dplyr::rowwise() %>%
+            dplyr::mutate_all(clean_zeros) -> res
+  }
+  return(res)
+}
+
+
