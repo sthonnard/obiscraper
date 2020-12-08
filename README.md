@@ -40,14 +40,14 @@ Then in the R console:
 **Examples**
 
 ```{r}
-library(obiscrapper)
+library(obiscraper)
 
 # Open Firefox and connect to https://my_fancy_company.com/analytics/
 # Password will be prompted
 connectobi(username = "kenny", obilink = "https://my_fancy_company.com/analytics/")
 
 # Submit logical query
-customers <- obiscrapper::submit_query('
+customers <- obiscraper::submit_query('
                           SELECT
                           "FancyDwh"."Customers"."Customer Name" s_1
                           FROM "FancyDwh"
@@ -55,11 +55,11 @@ customers <- obiscrapper::submit_query('
                           FETCH FIRST 10 ROWS ONLY')
 
 # Sumbit physical query to connection pool live_dwh
-customers <- obiscrapper::submit_physical_sql('select customer_name from fancy_dwh.dim_customer where rownum<10','live_dwh')
+customers <- obiscraper::submit_physical_sql('select customer_name from fancy_dwh.dim_customer where rownum<10','live_dwh')
 
 
 # Close Firefox
-obiscrapper::disconnectobi()
+obiscraper::disconnectobi()
 
 
 ```
