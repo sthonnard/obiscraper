@@ -33,7 +33,7 @@ Submit a physical query to the provided connection pool and return the result as
 \strong{disconnectobi()}\cr
 Disconnect from OBI and close the web browser.\cr
 
-\strong{get_obi_client()}\cr
+\strong{get_rs_client()}\cr
 Return the RSelenium driver client, enabling more control and debugging.
 }
 
