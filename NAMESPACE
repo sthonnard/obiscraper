@@ -3,5 +3,6 @@
 export(connectobi)
 export(disconnectobi)
 export(get_obi_client)
+export(submit_physical_sql)
 export(submit_query)
 importFrom(magrittr,"%>%")

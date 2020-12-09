@@ -22,7 +22,7 @@ RSelenium
 
 **Installation of rJava on Linux (Ubuntu)**
 
-In case Java is not installed on your system, you can install it with the command below:
+In case Java is not installed on your system, you can install it with the command below in your terminal:
 
     sudo apt install openjdk-11-jdk
 
@@ -55,7 +55,7 @@ customers <- obiscraper::submit_query('
                           FETCH FIRST 10 ROWS ONLY')
 
 # Sumbit physical query to connection pool live_dwh
-customers <- obiscraper::submit_physical_sql('select customer_name from fancy_dwh.dim_customer where rownum<10','live_dwh')
+customers_2 <- obiscraper::submit_physical_sql('select customer_name from fancy_dwh.dim_customer where rownum<10','live_dwh')
 
 
 # Close Firefox

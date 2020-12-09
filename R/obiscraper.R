@@ -1,12 +1,13 @@
-#' obiscraper: A Tool For Submitting Queries to Oracle Business Intelligence by webscraping the analytics server
+#' obiscraper: Query the Oracle Business Intelligence server by web scraping the analytics portal.
 #'
-#' Execute OBI queries by web scraping the analytics server with RSelenium. The analytics login form is handled,
-#' even when behind an extranet. Then queries are submitted by using
-#' the OBI GO URL (saw.dll?Go&SQL=select+Region,Euro+from+SupplierSalesEurope).
+#' Execute OBI queries by web scraping the analytics server with RSelenium. The portal login form is handled,
+#' even when behind an extranet. Then queries to the presentation or physical layer are submitted by using
+#' the OBI GO URL (eg saw.dll?Go&SQL=select+Region,Euro+from+SupplierSalesEurope) or by creating a narrative view.
 #' Queries result returned as R Data Frame.
 #'
 #' Prerequisite:\cr
-#' -CRAN package RSelenium\cr
+#' -Java
+#' -CRAN packages rJava, RSelenium\cr
 #' -Firefox
 #'
 #' Bugs report:\cr
@@ -27,7 +28,7 @@
 #' Disconnect from OBI and close the web browser.\cr
 #'
 #' \strong{get_obi_client()}\cr
-#' Return the RSelenium driver client, for debugging.
+#' Return the RSelenium driver client, enabling more control and debugging.
 #'
 #'
 #' @docType package
@@ -39,34 +40,40 @@ source("./R/f_obiscraper.R")
 #'
 #' Open Firefox, browse the OBI web portal and provide your username and password to the formular so you are logged in.
 #'
-#' @param path_to_firefox Optional path to Firefox in case it is not available in your path. Default NA.
+#' @param path_to_firefox Optional path to Firefox in case it is not available in the default path. Default NA.
 #' @param username  Username to access the OBI server. If not provided, it will be prompted.
 #' @param password User password to access the OBI server. If not provided, it will be prompted.
-#' @param obilink  Mandatory link to the analytics web portal. Eg https://mycompany.int/analytics/".
-#' @param extranet_elem_id  Optional. Id of the HTML element for user and password, in case you use an extranet before analytics server. Example: list("user"="rad_usr", "password"="rad_pw")
+#' @param obilink  Mandatory link to the analytics web portal. Eg "https://mycompany.int/analytics/".
+#' @param extranet_elem_id  Optional. Id of the HTML element for user and password, in case you use an extranet before analytics server. Example: list("user"="usr", "password"="passwd")
 #'
+#' @return None.
 #' @export
 #'
 #' @examples
 #' # Connect without providing the password to the function. Password will be prompted and hidden (using package getPass)
-#' connectobi(username="myusername", obilink="https://mycompany.int/analytics/")
+#' # connectobi(username="myusername", obilink="https://mycompany.int/analytics/")
 #'
 #' # Connect and provide the password to the function. Nothing will be prompted.
 #' # Useful for batch mode.
-#' connectobi(username="myusername", password="myfancypassword", obilink="https://mycompany.int/analytics/")
+#' # connectobi(username="myusername", password="myfancypassword", obilink="https://mycompany.int/analytics/")
 connectobi <- function(path_to_firefox = NA, username = NA, password = NA, obilink = NA,
                        extranet_elem_id = NA, debuglevel = 0)
 {
-  init(path_to_firefox,username, password, obilink, debuglevel)
-  init_extranet(extranet_elem_id)
-  connect_obi()
-  login_obi()
+  if (!is.na(obilink))
+  {
+    init(path_to_firefox,username, password, obilink, debuglevel)
+    init_extranet(extranet_elem_id)
+    connect_obi()
+    login_obi()
+  }
+
 }
 
 #' disconnectobi
 #'
-#' Close the session and RSelenium server
+#' Close the session, RSelenium server, and Firefox browser
 #'
+#' @return None.
 #' @export
 #'
 #' @examples
@@ -86,17 +93,18 @@ disconnectobi <- function()
 
 #' submit_query
 #'
-#' Submit a query to OBI Presentaion Layer and get the result as a Data Frame
+#' Submit a query to the Oracle Business Intelligence Presentaion Layer and get the result as a Data Frame.
 #'
-#' @param query The query that will be sent to OBI Presentation Layer
+#' This procedure will use the Oracle Business Intelligence GO URL facility (eg saw.dll?Go&SQL=select+Region,Euro+from+SupplierSalesEurope)
+#' in order to download the result as a flat file in your temp folder, which will then be parsed as a Data Frame in your R session.
+#'
+#' @param query The query that will be sent to Oracle Business Intelligence Presentation Layer.
 #' @importFrom magrittr %>%
+#' @return Data Frame containing the query result.
 #' @export
 #'
 #' @examples
-#' submit_query('SELECT "MyModel"."Flights"."Departure Airport" s_1
-#' FROM "MyModel"
-#' ORDER BY 1 ASC NULLS LAST
-#' FETCH FIRST 10000000 ROWS ONL')
+#' # submit_query('SELECT "MyModel"."Flights"."Departure Airport" s_1 FROM "MyModel" ORDER BY 1 ASC NULLS LAST FETCH FIRST 10000000 ROWS ONL')
 submit_query <- function(query = 'SELECT ... FROM "..." ORDER BY 1 ASC NULLS LAST FETCH FIRST 10000000 ROWS ONLY')
 {
   go_url <- paste0(obiescraper.globals$analytics_url,'saw.dll?Go&SQL=',URLencode(query),'&Format=CSV')
@@ -161,6 +169,7 @@ submit_query <- function(query = 'SELECT ... FROM "..." ORDER BY 1 ASC NULLS LAS
 #'
 #' Return the RSelenium client, for debugging
 #'
+#' @return RSelenium::rsDriver[['client']]
 #' @export
 #'
 #' @examples
@@ -178,6 +187,7 @@ get_obi_client <- function()
 #' @param pconnectionpool  Name of the connetion pool.
 #' @param clean_final_result  Clean final result (TRUE/FALSE). Will removed ",00" from integers.
 #'
+#' @return Data Frame containing the query result.
 #' @export
 #'
 #' @examples
