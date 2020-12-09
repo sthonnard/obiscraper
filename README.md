@@ -2,9 +2,9 @@
 
 **Introduction**
 
-This tool submits logical or physical queries by scraping the Oracle Business Intelligence analytics portal and returns the result as R Data Frame.
+This tool submits logical or physical queries by scraping the OBIEE 12c (Oracle Business Intelligence Enterprise Edition 12c) analytics portal and returns the result as R Data Frame.
 
-This is basically a convenient interface to Selenium for web scraping the OBI portal. This package will also take care of the login form.
+This is basically a convenient interface to Selenium for web scraping the OBIEE portal. This package will also take care of the login form, even if behind an extranet.
 
 When submitting a logical query, obiscraper uses the Oracle Business Intelligence GO URL in order to download the output as a text file in your temp folder. Then this text file is parsed in R and converted into a Data Frame.
 

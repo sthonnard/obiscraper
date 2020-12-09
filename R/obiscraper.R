@@ -1,7 +1,8 @@
 #' obiscraper: Query the Oracle Business Intelligence server by web scraping the analytics portal.
 #'
-#' Execute OBI queries by web scraping the analytics server with RSelenium. The portal login form is handled,
-#' even when behind an extranet. Then queries to the presentation or physical layer are submitted by using
+#' Submit queries to Oracle Business Intelligence Enterprise Edition (OBIEE) by web scraping the analytics portal with RSelenium.
+#' The portal login form is handled, even when behind an extranet.
+#' Then queries to the presentation or physical layer are submitted by using
 #' the OBI GO URL (eg saw.dll?Go&SQL=select+Region,Euro+from+SupplierSalesEurope) or by creating a narrative view.
 #' Queries result returned as R Data Frame.
 #'
@@ -38,7 +39,7 @@
 source("./R/f_obiscraper.R")
 #' connectobi
 #'
-#' Open Firefox, browse the OBI web portal and provide your username and password to the formular so you are logged in.
+#' Open Firefox, browse the OBI web portal and fill the login form with your username and password so you are logged in.
 #'
 #' @param path_to_firefox Optional path to Firefox in case it is not available in the default path. Default NA.
 #' @param username  Username to access the OBI server. If not provided, it will be prompted.
