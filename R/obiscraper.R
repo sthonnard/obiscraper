@@ -58,14 +58,14 @@ source("./R/f_obiscraper.R")
 #' # Useful for batch mode.
 #' # connectobi(username="myusername", password="myfancypassword", obilink="https://mycompany.int/analytics/")
 connectobi <- function(path_to_firefox = NA, username = NA, password = NA, obilink = NA,
-                       extranet_elem_id = NA, debuglevel = 0)
+                       extranet_elem_id = NA, debuglevel = 0, errstop = TRUE)
 {
   if (!is.na(obilink))
   {
     init(path_to_firefox,username, password, obilink, debuglevel)
     init_extranet(extranet_elem_id)
     connect_obi()
-    login_obi()
+    login_obi(errstop)
   }
 
 }
@@ -108,13 +108,14 @@ disconnectobi <- function()
 #' # submit_query('SELECT "MyModel"."Flights"."Departure Airport" s_1 FROM "MyModel" ORDER BY 1 ASC NULLS LAST FETCH FIRST 10000000 ROWS ONL')
 submit_query <- function(query = 'SELECT ... FROM "..." ORDER BY 1 ASC NULLS LAST FETCH FIRST 10000000 ROWS ONLY')
 {
+  rd <- get_rs_client()
   go_url <- paste0(obiescraper.globals$analytics_url,'saw.dll?Go&SQL=',URLencode(query),'&Format=CSV')
 
   curr_time <- Sys.time()
 
   log(paste("GO URL:",go_url))
 
-  reconnect() # Ensure user is connected before sumbitting the query
+  reconnect() # Ensure user is connected before submitting the query
 
   #.obiescraper.globals$rd$navigate(go_url)
   download_file(go_url)
@@ -177,6 +178,10 @@ submit_query <- function(query = 'SELECT ... FROM "..." ORDER BY 1 ASC NULLS LAS
 #' get_rs_client()
 get_rs_client <- function()
 {
+  if (!obiescraper.globals$rd_created)
+  {
+    stop("Run connectobi first!")
+  }
   return(obiescraper.globals$rd)
 }
 

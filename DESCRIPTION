@@ -13,5 +13,6 @@ Imports:
     dplyr,
     getPass,
     stringr,
-    rJava
+    rJava,
+    tidyr
 RoxygenNote: 7.1.0

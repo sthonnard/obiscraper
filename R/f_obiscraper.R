@@ -18,8 +18,9 @@ obiescraper.globals$tempdir <- paste0(tempdir(),'/obiscraper/')
 
 
 obiescraper.globals$extranet_elem_id <- list()
-obiescraper.globals$obi_form <- list("user" = "sawlogonuser", "password" = "sawlogonpwd", "invalid_user" = "An invalid User Name or Password was entered")
+obiescraper.globals$obi_form <- list("user" = "sawlogonuser", "password" = "sawlogonpwd", "invalid_user" = c("An invalid User Name or Password was entered"))
 obiescraper.globals$active_form <- obiescraper.globals$obi_form
+obiescraper.globals$rd_created <- FALSE
 
 # Initialize the path to firefox and profile
 init_firefoxpath <- function(path_to_firefox)
@@ -160,9 +161,10 @@ silence <- function(x)
 # Check if an element exists by id/class
 is_element_exists <- function(elem, using = "id")
 {
+  rd <- get_rs_client()
   el <- NULL
   tryCatch({
-    silence({el <- obiescraper.globals$rd$findElement(using = using, value = elem)})
+    silence({el <- rd$findElement(using = using, value = elem)})
     if (is.null(el))
     {
       return(FALSE)
@@ -250,6 +252,7 @@ connect_obi <- function()
     }
 
     obiescraper.globals$rd <- obiescraper.globals$rs[['client']]
+    obiescraper.globals$rd_created <- TRUE
     #obiescraper.globals$rd$open() # Open the browser
   }
 
@@ -259,7 +262,7 @@ connect_obi <- function()
 }
 
 # Login to obi
-login_obi <- function()
+login_obi <- function(errstop)
 {
   log("Login to obi", 1)
   # Fill the login form of the extranet and login once available
@@ -274,16 +277,24 @@ login_obi <- function()
                         warning,error = function(e){ # Error occurs when element not found
                           log("Detected extranet form", 1)
                           if (length(obiescraper.globals$extranet_elem_id) == 0) {
-                            disconnectobi()
-                            stop("OBI login form not found. Seems you are connecting from an extranet portal. Please provide extranet_elem_id to connectobi.")
+                            # Try to detect the form ids automatically
+                            obiescraper.globals$extranet_elem_id <- detect_element_id()
+                            if (length(obiescraper.globals$extranet_elem_id) == 0) {
+                              if (errstop){disconnectobi()}
+                              stop("OBI login form not found. Seems you are connecting from an extranet portal. Please provide extranet_elem_id to connectobi.")
+                            }
                           }
                           else
                           {
                             log("form info", 1)
                             if (!is.list(obiescraper.globals$extranet_elem_id))
                             {
-                              disconnectobi()
-                              stop("OBI login form not found. Seems you are connecting from an extranet portal. Please provide extranet_elem_id to connectobi.")
+                              # Try to detect the form ids automatically
+                              obiescraper.globals$extranet_elem_id <- detect_element_id()
+                              if (length(obiescraper.globals$extranet_elem_id) == 0) {
+                                if (errstop){disconnectobi()}
+                                stop("OBI login form not found. Seems you are connecting from an extranet portal. Please provide extranet_elem_id to connectobi.")
+                              }
                             }
                             log(obiescraper.globals$extranet_elem_id, 1)
                             obiescraper.globals$active_form <- obiescraper.globals$extranet_elem_id
@@ -292,7 +303,7 @@ login_obi <- function()
     )
 
     # Stop if incorrect username or password
-    if (stringr::str_detect(obiescraper.globals$rd$getPageSource(), obiescraper.globals$active_form$invalid_user))
+    if (max(stringr::str_detect(stringr::str_to_lower( obiescraper.globals$rd$getPageSource()), stringr::str_to_lower( obiescraper.globals$active_form$invalid_user))) == 1)
     {
       disconnectobi()
       stop("Incorrect username or password!")
@@ -403,7 +414,7 @@ run_physical_query <- function(psql="sselect airport_icao,longitude from my_dwh.
   # Add final ;
   sql <- paste0(psql,";")
 
-  rd <- obiescraper.globals$rd
+  rd <- get_rs_client()
 
 
   # Create a new SQL query
@@ -540,4 +551,66 @@ for (i = 0; i < x.length; i++) {
   }
 
   return(query_result_df)
+}
+
+
+# Detect id of the input elements for login and password
+detect_element_id <- function()
+{
+  tryCatch({
+
+    rs <- get_rs_client()
+
+    src <- rs$getPageSource()
+
+    # Get all html input elements
+    html_input <- data.frame(stringr::str_locate_all(src,"<input "))
+    colnames(html_input) <- c("input_start", "input_end")
+
+    # Get places where references to "password" appears on the page
+    password_label <- data.frame(stringr::str_to_lower(src) %>% stringr::str_locate_all("password"))
+    colnames(password_label)  <- c("password_start", "password_end")
+
+    # Merge all together
+    all_elements <- tidyr::crossing(html_input, password_label) %>%
+      dplyr::mutate(raw_tag = stringr::str_sub(src, input_start )) %>%
+      dplyr::mutate(end2 = stringr::str_locate(raw_tag,">")) %>%
+      dplyr::rowwise() %>%
+      dplyr::mutate(raw_tag2 = max(stringr::str_sub(raw_tag, 1, end2))) %>%
+      dplyr::select(-raw_tag) %>%
+      dplyr::filter(!stringr::str_detect(raw_tag2,"hidden")) %>%
+      dplyr::arrange(input_start, password_start) %>%
+      # Find id and class
+      dplyr::mutate(id = stringr::str_trim(stringr::str_extract(raw_tag2,' id=".*"')),
+             class =  stringr::str_trim(stringr::str_extract(raw_tag2,' class=".*"'))) %>%
+      dplyr::mutate(id = stringr::str_replace(stringr::str_replace_all(stringr::str_split(id, " ")[[1]][1],'"',''),"id=",""),
+             class = stringr::str_replace(stringr::str_replace_all(stringr::str_split(class, " ")[[1]][1],'"',''),"class=","")
+      )
+
+    # Assume the password inout html element is the first after password keyword
+    passwd <- all_elements %>% dplyr::filter(input_start > password_start) %>% head(1)
+
+    # Assume username html element is just before the password html element
+    username <- all_elements %>% dplyr::filter(input_start < passwd$input_start & !(raw_tag2 %in% passwd$raw_tag2)) %>% dplyr::arrange(desc(input_start)) %>% head(1)
+
+    passwdid <- max(passwd$id)
+    usernameid <- max(username$id)
+    if (is.na(passwdid) | is.na(usernameid))
+    {
+      stop("HTML element for login or password was not found.")
+    }
+    elements_id <- list("user" = usernameid, "password" = passwdid, "invalid_user" = c("Username or password are not valid.", "Incorrect login", "Wrong login or password"))
+    print(paste("Detected id of the password HTML input element:", elements_id$password))
+    print(paste("Detected id of the login HTML input element:", elements_id$user))
+    return(elements_id)
+
+    },
+    warning, error = function(e){
+      print("Cannot detect id of the input elements for login and password.")
+      message(e$message)
+      return(list())
+    }
+
+  )
+
 }
