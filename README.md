@@ -4,11 +4,19 @@
 
 This tool submits logical or physical queries by scraping the OBIEE 12c (Oracle Business Intelligence Enterprise Edition 12c) analytics portal and returns the result as R Data Frame.
 
-This is basically a convenient interface to Selenium for web scraping the OBIEE portal. This package will also take care of the login form, even if behind an extranet.
+**Technical description**
 
-When submitting a logical query, obiscraper uses the Oracle Business Intelligence GO URL in order to download the output as a text file in your temp folder. Then this text file is parsed in R and converted into a Data Frame.
+This is basically a convenient interface to Selenium for web scraping the OBIEE portal. This package will also take care of the login form, **even if the login form is not the default OBIEE page**. For instance when the login form is handled by your organization.
 
-When submitting a physical SQL query, obiscraper creates a narrative view based on that query and then extracts the content from the page.
+-   Logical query
+
+When submitting a logical query, *obiscraper* uses the Oracle Business Intelligence GO URL in order to download the output as a text file in your temp folder. Then this text file is parsed in R and converted into a Data Frame.
+
+-   Physical query
+
+Experimental.
+
+When submitting a physical SQL query, *obiscraper* creates a narrative view based on that query and then extracts the content from the page.
 
 **Dependencies**
 
@@ -63,3 +71,21 @@ obiscraper::disconnectobi()
 
 
 ```
+
+**Limitations**
+
+-   Might not work properly when OBIEE is not in **English**
+
+-   Not tested on Windows yet. Tested on Ubuntu and macOS.
+
+**Troubleshooting**
+
+-   Login form not detected
+
+    In case the login form is not detected, you can connect by providing the id of the HTML input elements for the user name and password. You can also provide the sentence that is used by your organization when username or password is incorrect, so such issue will be escalated to your R session.
+
+    ```{r}
+    connectobi(username = "kenny", obilink = "https://my_fancy_company.com/analytics/",
+               extranet_elem_id = list("user" = "usr_id", "password" = "pw_elem", "invalid_user" = "Username or password are incorrect!"))
+
+    ```
