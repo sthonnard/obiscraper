@@ -45,8 +45,6 @@ source("./R/f_obiscraper.R")
 #' @param username  Username to access the OBI server. If not provided, it will be prompted.
 #' @param password User password to access the OBI server. If not provided, it will be prompted.
 #' @param obilink  Mandatory link to the analytics web portal. Eg "https://mycompany.int/analytics/".
-#' @param extranet_elem_id  Optional. Id of the HTML element for user and password, in case you use an extranet before analytics server. Example: list("user"="usr", "password"="passwd")
-#'
 #' @return None.
 #' @export
 #'
@@ -58,12 +56,11 @@ source("./R/f_obiscraper.R")
 #' # Useful for batch mode.
 #' # connectobi(username="myusername", password="myfancypassword", obilink="https://mycompany.int/analytics/")
 connectobi <- function(path_to_firefox = NA, username = NA, password = NA, obilink = NA,
-                       extranet_elem_id = NA, debuglevel = 0, errstop = TRUE)
+                        debuglevel = 0, errstop = TRUE)
 {
   if (!is.na(obilink))
   {
     init(path_to_firefox,username, password, obilink, debuglevel)
-    init_extranet(extranet_elem_id)
     connect_obi()
     login_obi(errstop)
   }
