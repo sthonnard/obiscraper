@@ -78,14 +78,4 @@ obiscraper::disconnectobi()
 
 -   Not tested on Windows yet. Tested on Ubuntu and macOS.
 
-**Troubleshooting**
 
--   Login form not detected
-
-    In case the login form is not detected, you can connect by providing the id of the HTML input elements for the user name and password. You can also provide the sentence that is used by your organization when username or password is incorrect, so such issue will be escalated to your R session.
-
-    ```{r}
-    connectobi(username = "kenny", obilink = "https://my_fancy_company.com/analytics/",
-               extranet_elem_id = list("user" = "usr_id", "password" = "pw_elem", "invalid_user" = "Username or password are incorrect!"))
-
-    ```
