@@ -1,12 +1,16 @@
 # obiscraper
 
-**Introduction**
+## Introduction
 
 This tool submits logical or physical queries by scraping the OBIEE 12c (Oracle Business Intelligence Enterprise Edition 12c) analytics portal and returns the result as R Data Frame.
 
-**Technical description**
+## Technical description
 
 This is basically a convenient interface to Selenium for web scraping the OBIEE portal. This package will also take care of the login form, **even if the login form is not the default OBIEE page**. For instance when the login form is handled by your organization.
+
+-   Login
+
+The tool will gather all HTML input elements of the login page, fill the password in the first element that has type *password*, the *username* in the element just before, and finally will click on the first button that is just after the password element. 
 
 -   Logical query
 
@@ -14,11 +18,9 @@ When submitting a logical query, *obiscraper* uses the Oracle Business Intellige
 
 -   Physical query
 
-Experimental.
+When submitting a physical SQL query, *obiscraper* creates a narrative view based on that query and then extracts the content from the page. **Experimental.**
 
-When submitting a physical SQL query, *obiscraper* creates a narrative view based on that query and then extracts the content from the page.
-
-**Dependencies**
+## Dependencies
 
 Java
 
@@ -28,7 +30,8 @@ rJava
 
 RSelenium
 
-**Installation of rJava on Linux (Ubuntu)**
+## Installation 
+### Installation of rJava on Linux (Ubuntu)
 
 In case Java is not installed on your system, you can install it with the command below in your terminal:
 
@@ -40,12 +43,12 @@ Then in the R console:
 
     install.packages("rJava")
 
-**Installation of obiscraper**
+### Installation of obiscraper
 
     library(devtools)
     install_github("sthonnard/obiscraper")
 
-**Examples**
+## Examples
 
 ```{r}
 library(obiscraper)
@@ -72,7 +75,7 @@ obiscraper::disconnectobi()
 
 ```
 
-**Limitations**
+## Limitations
 
 -   Might not work properly when OBIEE is not in **English**
 
