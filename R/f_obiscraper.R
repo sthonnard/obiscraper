@@ -116,7 +116,15 @@ init_obilink <- function(obilink)
   }
   else
   {
-    obiescraper.globals$analytics_url <- obilink
+    if (stringr::str_ends(obilink, "/"))
+    {
+      obiescraper.globals$analytics_url <- obilink
+    }
+    else
+    {
+      obiescraper.globals$analytics_url <- paste0(obilink, "/")
+    }
+
   }
 }
 
